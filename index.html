@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🐼 熊猫代币 · 靓号地址生成器 (CREATE2)</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0d1117; color: #c9d1d9; padding: 16px; max-width: 800px; margin: auto; }
+        h1 { color: #f0a500; font-size: 24px; margin-bottom: 10px; text-align: center; }
+        .section { background: #161b22; border: 1px solid #30363d; padding: 16px; margin-bottom: 16px; border-radius: 10px; }
+        h2 { color: #58a6ff; font-size: 18px; margin-bottom: 12px; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+        .row { display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .row label { width: 180px; font-weight: bold; color: #8b949e; font-size: 14px; flex-shrink: 0; }
+        .row input, .row select { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 10px; border-radius: 6px; font-size: 14px; margin-right: 8px; flex: 1; min-width: 120px; }
+        .row select { flex: 0.5; min-width: 80px; }
+        .row button { background: #238636; color: white; border: 1px solid #2ea043; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; }
+        .row button:hover { background: #2ea043; }
+        .note { font-size: 11px; color: #8b949e; margin-top: 4px; width: 100%; padding-left: 180px; }
+        .status-row { display: flex; align-items: center; margin-bottom: 15px; }
+        #walletStatus { color: #3fb950; margin-left: 10px; }
+        #walletError { color: #f85149; font-size: 13px; }
+        #searchResult { background: #0d3b1e; padding: 12px; border-radius: 6px; margin-top: 10px; display: none; }
+        .btn-danger { background: #da3633; border-color: #f85149; }
+        .param-section { max-height: 400px; overflow-y: auto; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🐼 熊猫代币 · 地址靓号生成器</h1>
+
+    <!-- 连接区 -->
+    <div class="section">
+        <div class="status-row">
+            <button onclick="connectWallet()" style="background:#1f6feb; border-color:#1f6feb;">连接钱包</button>
+            <span id="walletStatus">⚪ 未连接</span>
+        </div>
+        <div id="walletError"></div>
+        <label style="display:block; margin-top:8px;">工厂合约地址（留空则使用公共 Create2Factory）</label>
+        <input type="text" id="factoryAddress" placeholder="0x4e59b44847b379578588920ca78fbf26c0b4956c" style="width:100%; margin-top:5px;">
+        <div style="font-size:12px; color:#8b949e; margin-top:3px;">
+            💡 如果链上没有公共工厂，请先点此部署简单工厂： 
+            <button onclick="deployFactory()" style="font-size:12px; padding:4px 8px;">部署工厂</button>
+        </div>
+    </div>
+
+    <!-- 构造参数输入 -->
+    <div id="paramForm" class="section">
+        <h2>📝 构造函数参数</h2>
+        <div class="param-section" id="paramContainer"></div>
+    </div>
+
+    <!-- 靓号搜索 & 部署 -->
+    <div class="section">
+        <h2>🎯 搜索靓号</h2>
+        <div class="row">
+            <label>目标尾号</label>
+            <input type="text" id="targetSuffix" value="0000" placeholder="0000" style="width:120px">
+            <span style="color:#8b949e; font-size:12px">只支持十六进制 (0-9, a-f)，例如 0000、abc、888</span>
+        </div>
+        <button onclick="startSearch()">🔍 开始搜索 salt</button>
+        <div id="searchStatus" style="margin:10px 0;"></div>
+        <div id="searchResult">
+            <div><b>✅ 找到匹配的 Salt：</b><span id="foundSalt"></span></div>
+            <div><b>预估合约地址：</b><span id="foundAddress" style="word-break:break-all;"></span></div>
+            <button class="btn-danger" onclick="deployWithSalt()" style="margin-top:10px;">🚀 使用此 Salt 部署合约</button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ 请将下面替换为你的 PandaToken 完整 creation bytecode（以 0x 开头）
+        const PANDA_BYTECODE = "0x__粘贴你的creation_bytecode__";
+
+        let signer, provider, factoryAddress, factoryContract;
+        const CREATE2_FACTORY = "0x4e59b44847b379578588920ca78fbf26c0b4956c";
+        let currentInitCodeHash = null;
+        let currentInitCode = null;
+
+        // 参数列表
+        const stringFields = [
+            { id: 'name', label: '代币名称', placeholder: 'Panda Token' },
+            { id: 'symbol', label: '代币简称', placeholder: 'PANDA' }
+        ];
+        const addressFields = [
+            { id: 'fundAddress', label: '基金地址', placeholder: '0x...' },
+            { id: 'currency', label: '交易对基础币', placeholder: 'WBNB地址' },
+            { id: 'swapRouter', label: 'Swap路由地址', placeholder: 'PancakeSwap Router' },
+            { id: 'receiveAddress', label: '初始接收地址', placeholder: '接收初始代币的地址' }
+        ];
+        const numberFields = [
+            { id: 'decimals', label: '精度', placeholder: '10' },
+            { id: 'totalSupply', label: '总发行量', placeholder: '1000000' },
+            { id: 'maxWallet', label: '最大持币量', placeholder: '50000' },
+            { id: 'buyFundFee', label: '买基金费率', placeholder: '100' },
+            { id: 'buyLPFee', label: '买LP费率', placeholder: '200' },
+            { id: 'buyBurnFee', label: '买销毁费率', placeholder: '100' },
+            { id: 'sellFundFee', label: '卖基金费率', placeholder: '200' },
+            { id: 'sellLPFee', label: '卖LP费率', placeholder: '300' },
+            { id: 'sellBurnFee', label: '卖销毁费率', placeholder: '200' },
+            { id: 'lpBurnRate', label: 'LP销毁比例', placeholder: '10' },
+            { id: 'lpBurnFrequency', label: 'LP销毁频率(小时)', placeholder: '24' },
+            { id: 'kb', label: '保护区块数', placeholder: '5' },
+            { id: 'airdropNumbs', label: '空投人数', placeholder: '3' },
+            { id: 'price', label: '预售单价', placeholder: '100000' },
+            { id: 'amountPerUnits', label: '每份数量', placeholder: '1000' },
+            { id: 'mintLimit', label: '预售总份数', placeholder: '500' },
+            { id: 'mineRate', label: '挖矿占比', placeholder: '10' },
+            { id: 'LPRewardCondition', label: 'LP挖矿基准', placeholder: '100' },
+            { id: 'minLPHoldAmount', label: '最低LP持仓', placeholder: '1' },
+            { id: 'minInvitorHoldAmount', label: '推荐人最低持币', placeholder: '1' },
+            { id: 'generations', label: '邀请代数', placeholder: '3' },
+            { id: 'fristRate', label: '一代返佣率', placeholder: '40' },
+            { id: 'secondRate', label: '二代返佣率', placeholder: '30' },
+            { id: 'thirdRate', label: '三代返佣率', placeholder: '20' },
+            { id: 'leftRate', label: '其余每代返佣率', placeholder: '10' },
+            { id: 'minTransAmount', label: '最低转账通知额', placeholder: '100' },
+            { id: 'minBindTransferAmount', label: '最低绑定转账额', placeholder: '100' },
+            { id: 'blackHoleRate', label: '绑定黑洞率', placeholder: '100' },
+            { id: 'minTotalBurnForBlackHole', label: '黑洞分红总销毁门槛', placeholder: '100000' },
+            { id: 'minDestroyForBlackHole', label: '单次销毁门槛', placeholder: '1000' },
+            { id: 'blackHoleDestroyRate', label: '主动销毁入黑洞率', placeholder: '5000' },
+            { id: 'decayRewardRate', label: '衰减奖励率', placeholder: '100' },
+            { id: 'fixedRewardRate', label: '固定奖励率', placeholder: '10' }
+        ];
+        const boolFields = [
+            { id: 'enablePause', label: '暂停功能', default: true },
+            { id: 'enableKillBlock', label: '杀区块', default: false },
+            { id: 'enableRewardList', label: '黑名单', default: false },
+            { id: 'enableWalletLimit', label: '钱包限额', default: false },
+            { id: 'enableChangeTax', label: '允许改税', default: true },
+            { id: 'currencyIsEth', label: '基础币是ETH', default: false },
+            { id: 'airdropEnable', label: '启用空投', default: false },
+            { id: 'enableBlackHoleReward', label: '黑洞分红', default: false }
+        ];
+
+        function cleanAddress(addr) {
+            if (!addr) return '';
+            return addr.replace(/\s+/g, '');
+        }
+
+        function buildParamForm() {
+            let html = '';
+            html += '<h3>字符串</h3>';
+            stringFields.forEach(f => {
+                html += `<div class="row"><label>${f.label}</label><input type="text" id="${f.id}" placeholder="${f.placeholder}"></div>`;
+            });
+            html += '<h3>地址</h3>';
+            addressFields.forEach(f => {
+                html += `<div class="row"><label>${f.label}</label><input type="text" id="${f.id}" placeholder="${f.placeholder}"></div>`;
+            });
+            html += '<h3>数值 (全都是十进制整数，按链上精度填写，例如 100 代表 1% 就填 100)</h3>';
+            numberFields.forEach(f => {
+                html += `<div class="row"><label>${f.label}</label><input type="text" id="${f.id}" placeholder="${f.placeholder}"></div>`;
+            });
+            html += '<h3>布尔开关</h3>';
+            boolFields.forEach(f => {
+                html += `<div class="row"><label>${f.label}</label><select id="${f.id}"><option value="true" ${f.default?'selected':''}>开启</option><option value="false" ${!f.default?'selected':''}>关闭</option></select></div>`;
+            });
+            document.getElementById('paramContainer').innerHTML = html;
+        }
+
+        function getParams() {
+            const strArr = stringFields.map(f => document.getElementById(f.id).value || f.placeholder);
+            const addrArr = addressFields.map(f => cleanAddress(document.getElementById(f.id).value) || f.placeholder);
+            const numArr = numberFields.map(f => {
+                let v = document.getElementById(f.id).value;
+                if (v === '') v = f.placeholder;
+                return ethers.BigNumber.from(v);
+            });
+            const boolArr = boolFields.map(f => document.getElementById(f.id).value === 'true');
+            return { strArr, addrArr, numArr, boolArr };
+        }
+
+        function encodeConstructorParams() {
+            const { strArr, addrArr, numArr, boolArr } = getParams();
+            const abiCoder = ethers.utils.defaultAbiCoder;
+            return abiCoder.encode(
+                ["string[]", "address[]", "uint256[]", "bool[]"],
+                [strArr, addrArr, numArr, boolArr]
+            );
+        }
+
+        function getFullInitCode() {
+            const encoded = encodeConstructorParams();
+            // 去掉 0x 前缀，拼接到 bytecode 后
+            return PANDA_BYTECODE + encoded.slice(2);
+        }
+
+        // 计算 CREATE2 地址
+        function getCreate2Address(factoryAddr, saltHex, initCodeHash) {
+            const salt32 = ethers.utils.hexZeroPad(saltHex, 32);
+            const deployerPadded = ethers.utils.hexZeroPad(factoryAddr, 32).slice(2);
+            const concat = '0xff' + deployerPadded + salt32.slice(2) + initCodeHash.slice(2);
+            return ethers.utils.getAddress('0x' + ethers.utils.keccak256(concat).slice(26));
+        }
+
+        async function connectWallet() {
+            try {
+                document.getElementById('walletError').innerText = '';
+                const w = window;
+                let p;
+                if (w.okxwallet) p = new ethers.providers.Web3Provider(w.okxwallet);
+                else if (w.ethereum) p = new ethers.providers.Web3Provider(w.ethereum);
+                else if (w.okexchain) p = new ethers.providers.Web3Provider(w.okexchain);
+                else throw new Error('未检测到钱包');
+                provider = p;
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                const addr = await signer.getAddress();
+                document.getElementById('walletStatus').innerText = '✅ ' + addr.slice(0,8)+'...';
+            } catch (e) {
+                document.getElementById('walletError').innerText = '连接失败：' + e.message;
+            }
+        }
+
+        async function deployFactory() {
+            if (!signer) return alert('请先连接钱包');
+            // 极简工厂的 creation bytecode
+            const factoryBytecode = "0x608060405234801561001057600080fd5b5061059d806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063deff007514610030575b600080fd5b61004361003e3660046103cd565b61005f565b6040516001600160a01b03909116815260200160405180910390f35b600080828686868660405160240161007b9594939291906104e7565b6040516020818303038152906040528051906020012090506000815180602001909101604052808252509050600081826040516100b99291906103b4565b9081526020016040518091039020905060008989898989896040516100e09594939291906104e7565b604051809103906000f0801580156100fc573d6000803e3d6000fd5b5091507fce410bb9ffd12b9e7e976c71bdcda12d4713b0b23c1fb3ff11ba55d8cbcdcc5283866040516101409291906001600160a01b03929092168252602082015260400190565b60405180910390a150979650505050505050565b806000811461016357600080fd5b5050565b80356001600160a01b038116811461017e57600080fd5b919050565b600082601f83011261019457600080fd5b8135602067ffffffffffffffff8211156101b0576101b06101d0565b8160051b6101c0828401610163565b9283528481018201928281019350808611156101db57600080fd5b8386015b818110156101ff576101f081610167565b8352918301916101df565b509695505050505050565b600082601f83011261021b57600080fd5b8135602067ffffffffffffffff821115610237576102376101d0565b8160051b610246828401610163565b92835284810182019282810193508086111561026257600080fd5b8386015b818110156101ff578035835291830191610266565b801515811461028957600080fd5b50565b803560ff8116811461017e57600080fd5b600082601f8301126102ae57600080fd5b8135602067ffffffffffffffff808411156102cb576102cb6101d0565b8260051b6102db828401610163565b9384528581018301938381019650878411156102f757600080fd5b8389015b84811015610394578035858111156103135760008081fd5b8801603f81018b136103255760008081fd5b8581013560408782111561033b5761033b6101d0565b61034c828a01601f19168a01610163565b8281528d828486010111156103615760008081fd5b828285018b83013760009281018a0192909252508452509183019183016102fb565b50979650505050505050565b80356103af8161027b565b50565b6000835160005b818110156103d557602081870181015185830152016103bb565b509190910192915050565b60008060008060008060a087890312156103e657600080fd5b863567ffffffffffffffff808211156103fe57600080fd5b61040a8a838b01610183565b9750602089013591508082111561042057600080fd5b61042c8a838b0161020a565b9650604089013591508082111561044257600080fd5b5061044f89828a0161029d565b94505061045e6060880161029d565b925061046c6080880161029d565b90509295509295509295565b600081518084526020808501945080840160005b838110156104a85781518752958201959082019060010161048c565b509495945050505050565b600081518084526020808501945080840160005b838110156104a85781511515875295820195908201906001016104c4565b60a0808252865190820181905260009060209060c0840190828a01845b8281101561052057815184529284019290840190600101610504565b505050838103828501526105348189610478565b915050828103604084015261054981876104b3565b9050828103606084015261055d81866104b3565b915050826080830152969550505050505056fea2646970667358221220c8f0c28c3b0c0e78772b8b28d1a0c4c6c2c6b9c0a6c0a0c0a0c0a0c0a0c0a0c0a64736f6c63430008120033";
+            try {
+                const factory = new ethers.ContractFactory([], factoryBytecode, signer);
+                const c = await factory.deploy();
+                await c.deployed();
+                document.getElementById('factoryAddress').value = c.address;
+                alert('✅ 工厂已部署，地址：' + c.address);
+            } catch (e) {
+                alert('工厂部署失败：' + e.message);
+            }
+        }
+
+        async function getFactoryAddress() {
+            let addr = document.getElementById('factoryAddress').value.trim();
+            if (!addr) {
+                // 检查链上通用 Create2Factory 是否存在
+                const code = await provider.getCode(CREATE2_FACTORY);
+                if (code === '0x') {
+                    throw new Error('通用 Create2Factory 未部署，请先点击“部署工厂”或手动输入一个工厂地址。');
+                }
+                return CREATE2_FACTORY;
+            }
+            return ethers.utils.getAddress(cleanAddress(addr));
+        }
+
+        async function getFactoryContract() {
+            const addr = await getFactoryAddress();
+            // 工厂需要实现 deploy(string[],address[],uint256[],bool[],bytes32) 函数
+            const abi = [
+                "function deploy(string[],address[],uint256[],bool[],bytes32) returns (address)"
+            ];
+            return new ethers.Contract(addr, abi, signer);
+        }
+
+        async function startSearch() {
+            if (!signer) return alert('请先连接钱包');
+            if (PANDA_BYTECODE === "0x__粘贴你的creation_bytecode__") {
+                return alert('请先将代码中的 PANDA_BYTECODE 替换为你的合约 creation bytecode！');
+            }
+            try {
+                const targetSuffix = document.getElementById('targetSuffix').value.trim().toLowerCase();
+                if (!/^[0-9a-f]+$/.test(targetSuffix)) return alert('尾号只能包含十六进制字符 (0-9, a-f)');
+
+                document.getElementById('searchResult').style.display = 'none';
+                const statusEl = document.getElementById('searchStatus');
+                statusEl.innerText = '⏳ 准备编码参数...';
+
+                const fullInitCode = getFullInitCode();
+                currentInitCode = fullInitCode;
+                currentInitCodeHash = ethers.utils.keccak256(fullInitCode);
+                const factoryAddr = await getFactoryAddress();
+                factoryAddress = factoryAddr;
+
+                statusEl.innerText = '🔍 搜索中，请稍候...';
+                let salt = ethers.BigNumber.from(0);
+                const maxAttempts = 10000000;
+                for (let i = 0; i < maxAttempts; i++) {
+                    const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 32);
+                    const addr = getCreate2Address(factoryAddr, saltHex, currentInitCodeHash);
+                    if (addr.toLowerCase().endsWith(targetSuffix)) {
+                        document.getElementById('foundSalt').innerText = i;
+                        document.getElementById('foundAddress').innerText = addr;
+                        document.getElementById('searchResult').style.display = 'block';
+                        statusEl.innerText = `✅ 在尝试 ${i} 次后找到！`;
+                        return;
+                    }
+                    if (i % 20000 === 0) {
+                        statusEl.innerText = `搜索中... 已尝试 ${i} 次，当前尾号: ${addr.slice(-targetSuffix.length)}`;
+                        await new Promise(r => setTimeout(r, 0)); // 防止卡死
+                    }
+                }
+                statusEl.innerText = '❌ 未找到，请增加尾号长度或尝试次数。';
+            } catch (e) {
+                document.getElementById('searchStatus').innerText = '❌ 出错：' + e.message;
+            }
+        }
+
+        async function deployWithSalt() {
+            if (!signer || !currentInitCodeHash) return alert('请先搜索 salt！');
+            try {
+                const salt = ethers.BigNumber.from(document.getElementById('foundSalt').innerText);
+                const saltBytes32 = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32);
+                const { strArr, addrArr, numArr, boolArr } = getParams();
+                const factory = await getFactoryContract();
+                const tx = await factory.deploy(strArr, addrArr, numArr, boolArr, saltBytes32);
+                await tx.wait();
+                alert('✅ 靓号合约部署成功！地址为：' + document.getElementById('foundAddress').innerText);
+            } catch (e) {
+                alert('部署失败：' + (e.reason || e.message));
+            }
+        }
+
+        window.onload = () => {
+            buildParamForm();
+        };
+    </script>
+</body>
+</html>
