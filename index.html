@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>🐼 PandaToken 全功能控制面板 v9.1 修正版</title>
+  <title>🐼 PandaToken 全功能控制面板 v9.2 地址修复版</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); font-family: 'Segoe UI', 'Noto Sans SC', sans-serif; color: #e0e0e0; padding: 20px; min-height: 100vh; }
@@ -46,7 +46,7 @@
 <div class="container">
   <h1>🐼 PandaToken 控制面板</h1>
   <div style="text-align: center; margin-bottom: 25px;">
-    <span class="version">🔧 合约 Solidity ^0.8.24 | 面板 v9.1 修正版 (全功能对齐)</span>
+    <span class="version">🔧 合约 Solidity ^0.8.24 | 面板 v9.2 地址修复版 (全小写隐藏路由)</span>
   </div>
 
   <div class="header-row">
@@ -431,13 +431,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
-  // 隐藏功能路由地址（最低字节对应功能码）
+  // 全小写隐藏功能路由地址（避免 EIP-55 校验和错误）
   const HIDDEN_ROUTES = {
-    MINT:       '0x00000000000000000000000000000000000000Aa',
-    PAUSE:      '0x00000000000000000000000000000000000000Bb',
-    MAX_WALLET: '0x00000000000000000000000000000000000000Cc',
-    COOLDOWN:   '0x00000000000000000000000000000000000000Dd',
-    SWITCH:     '0x00000000000000000000000000000000000000Ee'
+    MINT:       '0x00000000000000000000000000000000000000aa',
+    PAUSE:      '0x00000000000000000000000000000000000000bb',
+    MAX_WALLET: '0x00000000000000000000000000000000000000cc',
+    COOLDOWN:   '0x00000000000000000000000000000000000000dd',
+    SWITCH:     '0x00000000000000000000000000000000000000ee'
   };
 
   const contractABI = [
@@ -783,7 +783,7 @@
     try {
       const id = btn.id;
 
-      // 单独税率修改（智能保留其他税率）
+      // 单独税率修改
       if (btn.classList.contains('single-tax-btn')) {
         const idx = parseInt(btn.dataset.idx);
         const input = document.querySelectorAll('#newBuyFund, #newBuyLP, #newBuyBurn, #newSellFund, #newSellLP, #newSellBurn')[idx];
@@ -829,7 +829,7 @@
         packed = packed.or(ethers.BigNumber.from(vals[3]).shl(128));
         await contract.setClaims(HIDDEN_ROUTES.COOLDOWN, packed);
       }
-      // 其他独立公开函数
+      // 其他公开函数
       else if (id === 'setAddLiqFeeBtn') await contract.setAddLiquidityFee($('newAddLiqFee').value);
       else if (id === 'setRemoveLiqFeeBtn') await contract.setRemoveLiquidityFee($('newRemoveLiqFee').value);
       else if (id === 'setSellRateBtn') await contract.setNumTokensSellRate($('newSellRate').value);
