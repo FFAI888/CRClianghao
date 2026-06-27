@@ -1,316 +1,658 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🐼 熊猫代币 · 靓号地址生成器 (CREATE2)</title>
-    <script src="https://cdn.bootcdn.net/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0d1117; color: #c9d1d9; padding: 16px; max-width: 800px; margin: auto; }
-        h1 { color: #f0a500; font-size: 24px; margin-bottom: 10px; text-align: center; }
-        .section { background: #161b22; border: 1px solid #30363d; padding: 16px; margin-bottom: 16px; border-radius: 10px; }
-        h2 { color: #58a6ff; font-size: 18px; margin-bottom: 12px; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
-        .row { display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-        .row label { width: 180px; font-weight: bold; color: #8b949e; font-size: 14px; flex-shrink: 0; }
-        .row input, .row select { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 10px; border-radius: 6px; font-size: 14px; margin-right: 8px; flex: 1; min-width: 120px; }
-        .row select { flex: 0.5; min-width: 80px; }
-        .row button { background: #238636; color: white; border: 1px solid #2ea043; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; }
-        .row button:hover { background: #2ea043; }
-        .note { font-size: 11px; color: #8b949e; margin-top: 4px; width: 100%; padding-left: 180px; }
-        .status-row { display: flex; align-items: center; margin-bottom: 15px; }
-        #walletStatus { color: #3fb950; margin-left: 10px; }
-        #walletError { color: #f85149; font-size: 13px; }
-        #searchResult { background: #0d3b1e; padding: 12px; border-radius: 6px; margin-top: 10px; display: none; }
-        .btn-danger { background: #da3633; border-color: #f85149; }
-        .param-section { max-height: 400px; overflow-y: auto; margin-bottom: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>🐼 PandaToken 控制面板 v11 – 清晰分类版</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background: #0b0f19; font-family: 'Inter', 'Segoe UI', 'Noto Sans SC', sans-serif; color: #e2e8f0; padding: 20px; min-height: 100vh; }
+    .container { max-width: 1600px; margin:0 auto; }
+    h1 { font-size: 2.5rem; text-align: center; margin:20px 0 5px; background: linear-gradient(135deg, #f59e0b, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; font-size: 0.95rem; }
+    .header-bar { display: flex; flex-wrap: wrap; gap:15px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 18px 22px; margin-bottom: 25px; backdrop-filter: blur(10px); }
+    .btn { background: linear-gradient(135deg, #f97316, #ea580c); border: none; color: white; padding: 10px 22px; border-radius: 50px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(249,115,22,0.3); font-size: 0.9rem; white-space: nowrap; }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(249,115,22,0.4); }
+    .btn:disabled { background: #475569; box-shadow: none; cursor: not-allowed; opacity:0.7; }
+    .btn.secondary { background: #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .input-field { background: rgba(0,0,0,0.4); border: 1px solid #334155; border-radius: 14px; padding: 12px 16px; color: white; outline: none; width: 100%; font-size: 0.9rem; }
+    .input-field:focus { border-color: #f97316; }
+    select { background: rgba(0,0,0,0.5); border: 1px solid #334155; border-radius: 14px; padding: 12px 16px; color: white; outline: none; }
+    .badge { background: #1e293b; border-radius: 30px; padding: 8px 18px; font-size: 0.85rem; color: #cbd5e1; display: inline-flex; align-items: center; gap:6px; }
+    .card { background: rgba(255,255,255,0.02); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.06); border-radius: 24px; padding: 24px; margin-bottom: 24px; }
+    .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 12px; }
+    .card-header h3 { font-size: 1.2rem; font-weight: 600; color: #f97316; margin: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+    .param-group { margin-bottom: 16px; }
+    .param-label { font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .param-label .current { background: #1e293b; padding:2px 10px; border-radius: 20px; font-size: 0.75rem; }
+    .value-display { background: #0f172a; border-radius: 16px; padding: 14px 16px; font-family: 'Fira Code', monospace; color: #38bdf8; word-break: break-all; }
+    .hint { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+    .success-msg { color: #4ade80; }
+    .error-msg { color: #f87171; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+    .toggle-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .storage-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .storage-row:last-child { border-bottom: none; }
+    .tag { background: #334155; border-radius: 20px; padding: 3px 12px; font-size: 0.75rem; }
+    .tag.green { background: #166534; color: #86efac; }
+    .tag.red { background: #7f1d1d; color: #fca5a5; }
+    .tag.yellow { background: #713f12; color: #fde047; }
+    button.small { padding: 6px 14px; font-size: 0.8rem; }
+    hr { border-color: rgba(255,255,255,0.05); margin: 18px 0; }
+    .section-desc { color: #94a3b8; font-size: 0.85rem; margin-bottom: 16px; }
+  </style>
 </head>
 <body>
-    <h1>🐼 熊猫代币 · 地址靓号生成器</h1>
+<div class="container">
+  <h1>🐼 PandaToken</h1>
+  <div class="subtitle">全功能管理控制台 · 合约权限管理 · 隐藏功能 · 参数调优</div>
 
-    <!-- 连接区 -->
-    <div class="section">
-        <div class="status-row">
-            <button onclick="connectWallet()" style="background:#1f6feb; border-color:#1f6feb;">连接钱包</button>
-            <span id="walletStatus">⚪ 未连接</span>
+  <!-- 顶部连接栏 -->
+  <div class="header-bar">
+    <button id="connectWalletBtn" class="btn">🔌 连接钱包</button>
+    <div style="flex:1; display:flex; gap:10px;">
+      <input class="input-field" type="text" id="contractAddressInput" placeholder="代币合约地址 (0x...)" />
+      <button id="loadContractBtn" class="btn secondary">📋 加载</button>
+    </div>
+    <div class="badge">👛 <span id="walletAddress">未连接</span></div>
+    <div class="badge" id="networkName"></div>
+    <button id="refreshBtn" class="btn secondary" style="background:#1e293b;">🔄 刷新数据</button>
+  </div>
+  <div id="globalMsg" style="text-align:center; margin:8px 0; font-weight:500;"></div>
+
+  <!-- ======================= 只读数据区 ======================= -->
+  <div class="card">
+    <div class="card-header"><h3>📋 代币概况</h3><span class="tag">只读</span></div>
+    <div class="grid">
+      <div class="param-group"><span class="param-label">名称</span><div class="value-display" id="tokenName">-</div></div>
+      <div class="param-group"><span class="param-label">符号</span><div class="value-display" id="tokenSymbol">-</div></div>
+      <div class="param-group"><span class="param-label">精度</span><div class="value-display" id="tokenDecimals">-</div></div>
+      <div class="param-group"><span class="param-label">总供应量</span><div class="value-display" id="tokenTotalSupply">-</div></div>
+      <div class="param-group"><span class="param-label">流通量(去黑洞)</span><div class="value-display" id="circulatingSupply">-</div></div>
+      <div class="param-group"><span class="param-label">Owner</span><div class="value-display" id="ownerAddr" style="font-size:0.8rem;">-</div></div>
+      <div class="param-group"><span class="param-label">营销钱包</span><div class="value-display" id="fundAddr" style="font-size:0.8rem;">-</div></div>
+      <div class="param-group"><span class="param-label">最大钱包限制</span><div class="value-display" id="maxWallet">-</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3>📊 交易对 & 市场</h3><span class="tag">只读</span></div>
+    <div class="grid">
+      <div class="param-group"><span class="param-label">交易对地址</span><div class="value-display" id="pairAddress" style="font-size:0.8rem;">-</div></div>
+      <div class="param-group"><span class="param-label">路由</span><div class="value-display" id="routerAddress" style="font-size:0.8rem;">-</div></div>
+      <div class="param-group"><span class="param-label">基础币</span><div class="value-display" id="currencyAddr" style="font-size:0.8rem;">-</div></div>
+      <div class="param-group"><span class="param-label">TokenDistributor</span><div class="value-display" id="tokenDistributor" style="font-size:0.8rem;">-</div></div>
+      <div class="param-group"><span class="param-label">池子代币储备</span><div class="value-display" id="reserveToken">-</div></div>
+      <div class="param-group"><span class="param-label">池子基础币储备</span><div class="value-display" id="reserveCurrency">-</div></div>
+      <div class="param-group"><span class="param-label">估算价格</span><div class="value-display" id="tokenPrice">-</div></div>
+      <div class="param-group"><span class="param-label">总流动性 (基础币)</span><div class="value-display" id="totalLiquidity">-</div></div>
+    </div>
+  </div>
+
+  <!-- ======================= 合约公开状态 + 隐藏存储 ======================= -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><h3>📌 公开状态变量</h3></div>
+      <div class="storage-row"><span>enablePause</span><span class="tag" id="enablePauseVal">-</span></div>
+      <div class="storage-row"><span>pause</span><span class="tag" id="pauseVal">-</span></div>
+      <div class="storage-row"><span>enableWalletLimit</span><span class="tag" id="enableWalletLimitVal">-</span></div>
+      <div class="storage-row"><span>enableMint</span><span class="tag" id="enableMint">-</span></div>
+      <div class="storage-row"><span>enableRewardList</span><span class="tag" id="enableRewardList">-</span></div>
+      <div class="storage-row"><span>enableOffTrade</span><span class="tag" id="enableOffTrade">-</span></div>
+      <div class="storage-row"><span>enableKillBlock</span><span class="tag" id="enableKillBlock">-</span></div>
+      <div class="storage-row"><span>enableChangeTax</span><span class="tag" id="enableChangeTaxVal">-</span></div>
+      <div class="storage-row"><span>airdropEnable</span><span class="tag" id="airdropEnable">-</span></div>
+      <div class="storage-row"><span>currencyIsEth</span><span class="tag" id="currencyIsEth">-</span></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>🕵️ 隐藏存储变量 (直接读槽)</h3></div>
+      <div class="storage-row"><span>_configA 开关掩码</span><span class="value-display" id="configAVal" style="font-size:0.8rem;">-</span></div>
+      <div class="storage-row"><span>_configB 隐藏最大钱包</span><span class="value-display" id="configBVal">-</span></div>
+      <div class="storage-row"><span>_configC 买入单冷却</span><span class="value-display" id="configCVal">-</span></div>
+      <div class="storage-row"><span>_configD 买入全局冷却</span><span class="value-display" id="configDVal">-</span></div>
+      <div class="storage-row"><span>_configE 卖出单冷却</span><span class="value-display" id="configEVal">-</span></div>
+      <div class="storage-row"><span>_configF 卖出全局冷却</span><span class="value-display" id="configFVal">-</span></div>
+      <div class="storage-row"><span>买入营销税</span><span id="htBuyFund" class="tag">-</span></div>
+      <div class="storage-row"><span>买入流动性税</span><span id="htBuyLP" class="tag">-</span></div>
+      <div class="storage-row"><span>买入销毁税</span><span id="htBuyBurn" class="tag">-</span></div>
+      <div class="storage-row"><span>卖出营销税</span><span id="htSellFund" class="tag">-</span></div>
+      <div class="storage-row"><span>卖出流动性税</span><span id="htSellLP" class="tag">-</span></div>
+      <div class="storage-row"><span>卖出销毁税</span><span id="htSellBurn" class="tag">-</span></div>
+      <div class="storage-row"><span>添加流动性税</span><span id="htAddLiq" class="tag">-</span></div>
+      <div class="storage-row"><span>移除流动性税</span><span id="htRemoveLiq" class="tag">-</span></div>
+    </div>
+  </div>
+
+  <!-- ======================= 查询工具 ======================= -->
+  <div class="card">
+    <div class="card-header"><h3>🔍 权限与余额查询</h3></div>
+    <div class="grid">
+      <div class="param-group">
+        <span class="param-label">手续费白名单</span>
+        <div style="display:flex; gap:10px;"><input class="input-field" id="queryFeeWhitelistAddr" placeholder="地址"><button class="btn small" id="queryFeeWhitelistBtn">查询</button></div>
+        <span id="queryFeeWhitelistResult" class="hint"></span>
+      </div>
+      <div class="param-group">
+        <span class="param-label">转账白名单</span>
+        <div style="display:flex; gap:10px;"><input class="input-field" id="queryAllWhitelistAddr" placeholder="地址"><button class="btn small" id="queryAllWhitelistBtn">查询</button></div>
+        <span id="queryAllWhitelistResult" class="hint"></span>
+      </div>
+      <div class="param-group">
+        <span class="param-label">黑名单(冻结)</span>
+        <div style="display:flex; gap:10px;"><input class="input-field" id="queryRewardListAddr" placeholder="地址"><button class="btn small" id="queryRewardListBtn">查询</button></div>
+        <span id="queryRewardListResult" class="hint"></span>
+      </div>
+      <div class="param-group">
+        <span class="param-label">任意地址余额</span>
+        <div style="display:flex; gap:10px;"><input class="input-field" id="queryBalanceAddr" placeholder="地址"><button class="btn small" id="queryBalanceBtn">查询</button></div>
+        <span id="queryBalanceResult" class="hint"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= 管理员操作区 ======================= -->
+  <div id="adminSection" style="display:none;">
+    <hr>
+    <h2 style="color:#f97316; margin:30px 0 20px;">⚙️ 管理员操作 (仅 Owner)</h2>
+
+    <!-- 1. 开盘与交易对 -->
+    <div class="card">
+      <div class="card-header"><h3>🚀 开盘 & 交易对管理</h3></div>
+      <div class="grid">
+        <div class="param-group">
+          <span class="param-label">开盘状态 <span class="current" id="currentStartBlock">-</span></span>
+          <button class="btn small" id="launchBtn">🚀 执行 launch()</button>
+          <div class="hint">调用后 startTradeBlock = 当前区块，交易正式开启。</div>
         </div>
-        <div id="walletError"></div>
-        <label style="display:block; margin-top:8px;">工厂合约地址（留空则使用公共 Create2Factory）</label>
-        <input type="text" id="factoryAddress" placeholder="0x4e59b44847b379578588920ca78fbf26c0b4956c" style="width:100%; margin-top:5px;">
-        <div style="font-size:12px; color:#8b949e; margin-top:3px;">
-            💡 如果链上没有公共工厂，请先点此部署简单工厂： 
-            <button onclick="deployFactory()" style="font-size:12px; padding:4px 8px;">部署工厂</button>
+        <div class="param-group">
+          <span class="param-label">设置交易对白名单</span>
+          <input class="input-field" id="swapPairAddr" placeholder="交易对地址">
+          <select id="swapPairStatus"><option value="true">启用</option><option value="false">禁用</option></select>
+          <button class="btn small" id="setSwapPairBtn">更新</button>
+          <div class="hint">被标记为交易对的地址用于税收计算。</div>
         </div>
+      </div>
     </div>
 
-    <!-- 构造参数输入 -->
-    <div id="paramForm" class="section">
-        <h2>📝 构造函数参数</h2>
-        <div class="param-section" id="paramContainer"></div>
+    <!-- 2. 税率设置 -->
+    <div class="card">
+      <div class="card-header"><h3>🧾 交易税率 (万分比)</h3><span class="tag yellow">需 enableChangeTax 开启</span></div>
+      <div class="section-desc">所有税率单位为万分比，例如 300 = 3%。可单独修改或批量提交。修改前请确保 enableChangeTax 为 true。</div>
+      <div class="grid">
+        <div class="param-group">
+          <span class="param-label">买入营销 <span id="currentBuyFund" class="current">-</span></span>
+          <div style="display:flex; gap:8px;"><input class="input-field" id="newBuyFund" placeholder="新值"><button class="btn small single-tax" data-idx="0">更新</button></div>
+        </div>
+        <div class="param-group">
+          <span class="param-label">买入流动性 <span id="currentBuyLP" class="current">-</span></span>
+          <div style="display:flex; gap:8px;"><input class="input-field" id="newBuyLP" placeholder="新值"><button class="btn small single-tax" data-idx="1">更新</button></div>
+        </div>
+        <div class="param-group">
+          <span class="param-label">买入销毁 <span id="currentBuyBurn" class="current">-</span></span>
+          <div style="display:flex; gap:8px;"><input class="input-field" id="newBuyBurn" placeholder="新值"><button class="btn small single-tax" data-idx="2">更新</button></div>
+        </div>
+        <div class="param-group">
+          <span class="param-label">卖出营销 <span id="currentSellFund" class="current">-</span></span>
+          <div style="display:flex; gap:8px;"><input class="input-field" id="newSellFund" placeholder="新值"><button class="btn small single-tax" data-idx="3">更新</button></div>
+        </div>
+        <div class="param-group">
+          <span class="param-label">卖出流动性 <span id="currentSellLP" class="current">-</span></span>
+          <div style="display:flex; gap:8px;"><input class="input-field" id="newSellLP" placeholder="新值"><button class="btn small single-tax" data-idx="4">更新</button></div>
+        </div>
+        <div class="param-group">
+          <span class="param-label">卖出销毁 <span id="currentSellBurn" class="current">-</span></span>
+          <div style="display:flex; gap:8px;"><input class="input-field" id="newSellBurn" placeholder="新值"><button class="btn small single-tax" data-idx="5">更新</button></div>
+        </div>
+      </div>
+      <div style="margin-top:15px; background: rgba(0,0,0,0.2); border-radius:16px; padding:14px;">
+        <span class="param-label">批量覆盖六个税率</span>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;">
+          <input class="input-field" id="bulkBuyFund" placeholder="买入营销" style="width:110px;">
+          <input class="input-field" id="bulkBuyLP" placeholder="买入流动性" style="width:110px;">
+          <input class="input-field" id="bulkBuyBurn" placeholder="买入销毁" style="width:110px;">
+          <input class="input-field" id="bulkSellFund" placeholder="卖出营销" style="width:110px;">
+          <input class="input-field" id="bulkSellLP" placeholder="卖出流动性" style="width:110px;">
+          <input class="input-field" id="bulkSellBurn" placeholder="卖出销毁" style="width:110px;">
+          <button class="btn small" id="bulkTaxBtn">一次性更新</button>
+        </div>
+      </div>
     </div>
 
-    <!-- 靓号搜索 & 部署 -->
-    <div class="section">
-        <h2>🎯 搜索靓号</h2>
-        <div class="row">
-            <label>目标尾号</label>
-            <input type="text" id="targetSuffix" value="0000" placeholder="0000" style="width:120px">
-            <span style="color:#8b949e; font-size:12px">只支持十六进制 (0-9, a-f)，例如 0000、abc、888</span>
+    <!-- 3. 流动性税费 -->
+    <div class="card">
+      <div class="card-header"><h3>🏦 添加/移除流动性税率</h3></div>
+      <div class="grid">
+        <div class="param-group">
+          <span class="param-label">添加流动性税率 <span id="currentAddLiqFee" class="current">-</span></span>
+          <input class="input-field" id="newAddLiqFee" placeholder="万分比">
+          <button class="btn small" id="setAddLiqFeeBtn">更新</button>
         </div>
-        <button onclick="startSearch()">🔍 开始搜索 salt</button>
-        <div id="searchStatus" style="margin:10px 0;"></div>
-        <div id="searchResult">
-            <div><b>✅ 找到匹配的 Salt：</b><span id="foundSalt"></span></div>
-            <div><b>预估合约地址：</b><span id="foundAddress" style="word-break:break-all;"></span></div>
-            <button class="btn-danger" onclick="deployWithSalt()" style="margin-top:10px;">🚀 使用此 Salt 部署合约</button>
+        <div class="param-group">
+          <span class="param-label">移除流动性税率 <span id="currentRemoveLiqFee" class="current">-</span></span>
+          <input class="input-field" id="newRemoveLiqFee" placeholder="万分比">
+          <button class="btn small" id="setRemoveLiqFeeBtn">更新</button>
         </div>
+      </div>
     </div>
 
-    <script>
-        // ⚠️ 请将下面替换为你的 PandaToken 完整 creation bytecode（以 0x 开头）
-        const PANDA_BYTECODE = "0x__粘贴你的creation_bytecode__";
+    <!-- 4. 高级功能（隐藏） -->
+    <div class="card">
+      <div class="card-header"><h3>🎛️ 隐藏高级控制 (通过 setClaims 路由)</h3><span class="tag green">需先设置掩码</span></div>
+      <div class="section-desc">以下功能依赖 _configA 掩码的对应位开启：bit0 增发, bit1 暂停, bit2 最大钱包, bit3 冷却。操作前请先更新掩码。</div>
+      <div class="grid">
+        <div class="param-group">
+          <span class="param-label">_configA 掩码 <span id="currentConfigA" class="current">-</span></span>
+          <input class="input-field" id="newConfigA" placeholder="例如 15 全部开启">
+          <button class="btn small" id="setConfigABtn">更新掩码</button>
+          <div class="hint">1=增发, 2=暂停, 4=最大钱包, 8=冷却。相加组合。</div>
+        </div>
+        <div class="param-group">
+          <span class="param-label">增发代币 (需要 bit0)</span>
+          <input class="input-field" id="mintTarget" placeholder="接收地址">
+          <input class="input-field" id="mintAmount" placeholder="人类可读数量">
+          <button class="btn small" id="hiddenMintBtn">执行增发</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">暂停交易 (需要 bit1)</span>
+          <button class="btn small" id="hiddenPauseBtn">切换暂停</button>
+          <div class="hint">通过 setClaims(0xBB, 0/1)</div>
+        </div>
+        <div class="param-group">
+          <span class="param-label">最大钱包 (需要 bit2)</span>
+          <input class="input-field" id="hiddenMaxWallet" placeholder="新限额 (人类可读)">
+          <button class="btn small" id="hiddenSetMaxWalletBtn">更新</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">交易冷却参数 (需要 bit3)</span>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <input class="input-field" id="cooldownBuySingle" placeholder="买入单地址冷却(秒)">
+            <input class="input-field" id="cooldownBuyGlobal" placeholder="买入全局冷却(秒)">
+            <input class="input-field" id="cooldownSellSingle" placeholder="卖出单地址冷却(秒)">
+            <input class="input-field" id="cooldownSellGlobal" placeholder="卖出全局冷却(秒)">
+          </div>
+          <button class="btn small" id="setCooldownBtn">设置冷却</button>
+        </div>
+      </div>
+    </div>
 
-        let signer, provider, factoryAddress, factoryContract;
-        const CREATE2_FACTORY = "0x4e59b44847b379578588920ca78fbf26c0b4956c";
-        let currentInitCodeHash = null;
-        let currentInitCode = null;
+    <!-- 5. 其他交易参数 -->
+    <div class="card">
+      <div class="card-header"><h3>🔧 其他交易参数</h3></div>
+      <div class="grid">
+        <div class="param-group">
+          <span class="param-label">自动卖出比例 (%) <span id="currentSellRate" class="current">-</span></span>
+          <input class="input-field" id="newSellRate" placeholder="例如 20">
+          <button class="btn small" id="setSellRateBtn">更新</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">LP销毁率 (万分比) <span id="currentLpBurnRate" class="current">-</span></span>
+          <input class="input-field" id="newLpBurnRate" placeholder="≤100">
+          <button class="btn small" id="setLpBurnRateBtn">更新</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">LP销毁间隔 (小时) <span id="currentLpBurnFreq" class="current">-</span></span>
+          <input class="input-field" id="newLpBurnFreq" placeholder="例如 24">
+          <button class="btn small" id="setLpBurnFreqBtn">更新</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">杀区块长度 kb <span id="currentKB" class="current">-</span></span>
+          <input class="input-field" id="newKB" placeholder="区块数">
+          <button class="btn small" id="setKBBtn">更新</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">空投数量 <span id="currentAirdropNumbs" class="current">-</span></span>
+          <input class="input-field" id="newAirdropNumbs" placeholder="≤5">
+          <button class="btn small" id="setAirdropNumbsBtn">更新</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">AntiSYNC <span id="currentAntiSync" class="current">-</span></span>
+          <select id="newAntiSync"><option value="true">开启</option><option value="false">关闭</option></select>
+          <button class="btn small" id="setAntiSyncBtn">设置</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">空投功能启用 <span id="currentAirDropEnable" class="current">-</span></span>
+          <select id="newAirDropEnable"><option value="true">开启</option><option value="false">关闭</option></select>
+          <button class="btn small" id="setAirDropEnableBtn">设置</button>
+        </div>
+      </div>
+    </div>
 
-        // 参数列表
-        const stringFields = [
-            { id: 'name', label: '代币名称', placeholder: 'Panda Token' },
-            { id: 'symbol', label: '代币简称', placeholder: 'PANDA' }
-        ];
-        const addressFields = [
-            { id: 'fundAddress', label: '基金地址', placeholder: '0x...' },
-            { id: 'currency', label: '交易对基础币', placeholder: 'WBNB地址' },
-            { id: 'swapRouter', label: 'Swap路由地址', placeholder: 'PancakeSwap Router' },
-            { id: 'receiveAddress', label: '初始接收地址', placeholder: '接收初始代币的地址' }
-        ];
-        const numberFields = [
-            { id: 'decimals', label: '精度', placeholder: '10' },
-            { id: 'totalSupply', label: '总发行量', placeholder: '1000000' },
-            { id: 'maxWallet', label: '最大持币量', placeholder: '50000' },
-            { id: 'buyFundFee', label: '买基金费率', placeholder: '100' },
-            { id: 'buyLPFee', label: '买LP费率', placeholder: '200' },
-            { id: 'buyBurnFee', label: '买销毁费率', placeholder: '100' },
-            { id: 'sellFundFee', label: '卖基金费率', placeholder: '200' },
-            { id: 'sellLPFee', label: '卖LP费率', placeholder: '300' },
-            { id: 'sellBurnFee', label: '卖销毁费率', placeholder: '200' },
-            { id: 'lpBurnRate', label: 'LP销毁比例', placeholder: '10' },
-            { id: 'lpBurnFrequency', label: 'LP销毁频率(小时)', placeholder: '24' },
-            { id: 'kb', label: '保护区块数', placeholder: '5' },
-            { id: 'airdropNumbs', label: '空投人数', placeholder: '3' },
-            { id: 'price', label: '预售单价', placeholder: '100000' },
-            { id: 'amountPerUnits', label: '每份数量', placeholder: '1000' },
-            { id: 'mintLimit', label: '预售总份数', placeholder: '500' },
-            { id: 'mineRate', label: '挖矿占比', placeholder: '10' },
-            { id: 'LPRewardCondition', label: 'LP挖矿基准', placeholder: '100' },
-            { id: 'minLPHoldAmount', label: '最低LP持仓', placeholder: '1' },
-            { id: 'minInvitorHoldAmount', label: '推荐人最低持币', placeholder: '1' },
-            { id: 'generations', label: '邀请代数', placeholder: '3' },
-            { id: 'fristRate', label: '一代返佣率', placeholder: '40' },
-            { id: 'secondRate', label: '二代返佣率', placeholder: '30' },
-            { id: 'thirdRate', label: '三代返佣率', placeholder: '20' },
-            { id: 'leftRate', label: '其余每代返佣率', placeholder: '10' },
-            { id: 'minTransAmount', label: '最低转账通知额', placeholder: '100' },
-            { id: 'minBindTransferAmount', label: '最低绑定转账额', placeholder: '100' },
-            { id: 'blackHoleRate', label: '绑定黑洞率', placeholder: '100' },
-            { id: 'minTotalBurnForBlackHole', label: '黑洞分红总销毁门槛', placeholder: '100000' },
-            { id: 'minDestroyForBlackHole', label: '单次销毁门槛', placeholder: '1000' },
-            { id: 'blackHoleDestroyRate', label: '主动销毁入黑洞率', placeholder: '5000' },
-            { id: 'decayRewardRate', label: '衰减奖励率', placeholder: '100' },
-            { id: 'fixedRewardRate', label: '固定奖励率', placeholder: '10' }
-        ];
-        const boolFields = [
-            { id: 'enablePause', label: '暂停功能', default: true },
-            { id: 'enableKillBlock', label: '杀区块', default: false },
-            { id: 'enableRewardList', label: '黑名单', default: false },
-            { id: 'enableWalletLimit', label: '钱包限额', default: false },
-            { id: 'enableChangeTax', label: '允许改税', default: true },
-            { id: 'currencyIsEth', label: '基础币是ETH', default: false },
-            { id: 'airdropEnable', label: '启用空投', default: false },
-            { id: 'enableBlackHoleReward', label: '黑洞分红', default: false }
-        ];
+    <!-- 6. 预售参数 -->
+    <div class="card">
+      <div class="card-header"><h3>💰 预售 (Mint) 参数</h3></div>
+      <div class="grid">
+        <div class="param-group">
+          <span class="param-label">价格 (基础币) <span id="currentPresalePrice" class="current">-</span></span>
+          <input class="input-field" id="newPrice" placeholder="例如 0.01">
+          <button class="btn small" id="setPriceBtn">更新</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">每单位代币数 <span id="currentAmountPerUnit" class="current">-</span></span>
+          <input class="input-field" id="newAmountPerUnit" placeholder="人类可读">
+          <button class="btn small" id="setAmountPerUnitBtn">更新</button>
+        </div>
+        <div class="param-group">
+          <span class="param-label">预售上限 (单位数) <span id="currentMintLimit" class="current">-</span></span>
+          <input class="input-field" id="newMintLimit" placeholder="整数">
+          <button class="btn small" id="setMintLimitBtn">更新</button>
+        </div>
+      </div>
+    </div>
 
-        function cleanAddress(addr) {
-            if (!addr) return '';
-            return addr.replace(/\s+/g, '');
+    <!-- 7. 地址管理 -->
+    <div class="card">
+      <div class="card-header"><h3>👥 地址权限批量管理</h3></div>
+      <div class="param-group">
+        <span class="param-label">手续费白名单</span>
+        <input class="input-field" id="feeWhitelistAddrs" placeholder="地址1,地址2">
+        <select id="feeWhitelistStatus"><option value="true">启用</option><option value="false">禁用</option></select>
+        <button class="btn small" id="setFeeWhitelistBtn">批量设置</button>
+      </div>
+      <div class="param-group">
+        <span class="param-label">转账白名单</span>
+        <input class="input-field" id="allWhitelistAddrs" placeholder="地址1,地址2">
+        <select id="allWhitelistStatus"><option value="true">启用</option><option value="false">禁用</option></select>
+        <button class="btn small" id="setAllWhitelistBtn">批量设置</button>
+      </div>
+      <div class="param-group">
+        <span class="param-label">黑名单 (冻结)</span>
+        <input class="input-field" id="rewardListAddrs" placeholder="地址1,地址2">
+        <select id="rewardListStatus"><option value="true">加入</option><option value="false">移出</option></select>
+        <button class="btn small" id="setRewardListBtn">批量设置</button>
+      </div>
+      <div class="param-group">
+        <span class="param-label">营销钱包 <span id="currentFundAddr" class="current">-</span></span>
+        <input class="input-field" id="newFundAddr" placeholder="新地址">
+        <button class="btn small" id="setFundAddrBtn">更新</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:40px; text-align:center; color:#475569; font-size:0.8rem;">
+    PandaToken 全功能面板 · 所有操作均上链并消耗 Gas
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script>
+  const abi = [
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint256)",
+    "function totalSupply() view returns (uint256)",
+    "function balanceOf(address) view returns (uint256)",
+    "function owner() view returns (address)",
+    "function fundAddress() view returns (address)",
+    "function maxWalletAmount() view returns (uint256)",
+    "function startTradeBlock() view returns (uint256)",
+    "function enablePause() view returns (bool)",
+    "function pause() view returns (bool)",
+    "function enableWalletLimit() view returns (bool)",
+    "function enableMint() view returns (bool)",
+    "function enableRewardList() view returns (bool)",
+    "function enableOffTrade() view returns (bool)",
+    "function enableKillBlock() view returns (bool)",
+    "function enableChangeTax() view returns (bool)",
+    "function airdropEnable() view returns (bool)",
+    "function currencyIsEth() view returns (bool)",
+    "function totalFundAmountReceive() view returns (uint256)",
+    "function kb() view returns (uint256)",
+    "function airdropNumbs() view returns (uint256)",
+    "function antiSYNC() view returns (bool)",
+    "function getCirculatingSupply() view returns (uint256)",
+    "function numTokensSellRate() view returns (uint256)",
+    "function lpBurnRate() view returns (uint256)",
+    "function lpBurnFrequency() view returns (uint256)",
+    "function lastLpBurnTime() view returns (uint256)",
+    "function _mainPair() view returns (address)",
+    "function _swapRouter() view returns (address)",
+    "function currency() view returns (address)",
+    "function _tokenDistributor() view returns (address)",
+    "function price() view returns (uint256)",
+    "function minted() view returns (uint256)",
+    "function amountPerUnits() view returns (uint256)",
+    "function mintLimit() view returns (uint256)",
+    "function _feeWhiteList(address) view returns (bool)",
+    "function _allWhiteList(address) view returns (bool)",
+    "function _rewardList(address) view returns (bool)",
+    "function completeCustoms(uint256[]) external",
+    "function setAddLiquidityFee(uint256) external",
+    "function setRemoveLiquidityFee(uint256) external",
+    "function setNumTokensSellRate(uint256) external",
+    "function setlpBurnRate(uint256) external",
+    "function setlpBurnFrequency(uint256) external",
+    "function setkb(uint256) external",
+    "function setAirdropNumbs(uint256) external",
+    "function setAntiSYNCEnable(bool) external",
+    "function setFundAddress(address) external",
+    "function setFeeWhiteList(address[], bool) external",
+    "function setWhiteList(address[], bool) external",
+    "function multi_bclist(address[], bool) external",
+    "function setClaims(address, uint256) external",
+    "function launch() external",
+    "function setAirDropEnable(bool) external",
+    "function setPrice(uint256) external",
+    "function setAmountPerUnits(uint256) external",
+    "function setMintLimit(uint256) external",
+    "function setSwapPairList(address, bool) external"
+  ];
+
+  let provider, signer, contract, userAddr, tokenAddr, isOwner = false, decimals = 18;
+  const $ = (id) => document.getElementById(id);
+  const msg = (t, err) => { $('globalMsg').innerHTML = t; $('globalMsg').className = err ? 'error-msg' : 'success-msg'; };
+  const loading = (btn, on) => {
+    if (on) { btn.dataset.orig = btn.textContent; btn.textContent = '⏳'; btn.disabled = true; }
+    else { btn.textContent = btn.dataset.orig || btn.textContent; btn.disabled = false; }
+  };
+  const getStorage = async (slot) => provider ? ethers.BigNumber.from(await provider.getStorageAt(tokenAddr, slot)) : ethers.BigNumber.from(0);
+
+  async function refreshAll() {
+    if (!contract) return;
+    try {
+      // 基础数据
+      const [name, symbol, dec, total, circ, owner, fund, maxW, start, mainPair, router, currencyA, distributor] = await Promise.all([
+        contract.name(), contract.symbol(), contract.decimals(), contract.totalSupply(), contract.getCirculatingSupply(),
+        contract.owner(), contract.fundAddress(), contract.maxWalletAmount(), contract.startTradeBlock(), contract._mainPair(),
+        contract._swapRouter(), contract.currency(), contract._tokenDistributor()
+      ]);
+      decimals = dec.toNumber();
+      $('tokenName').textContent = name; $('tokenSymbol').textContent = symbol; $('tokenDecimals').textContent = decimals;
+      $('tokenTotalSupply').textContent = ethers.utils.formatUnits(total, decimals);
+      $('circulatingSupply').textContent = ethers.utils.formatUnits(circ, decimals);
+      $('ownerAddr').textContent = owner; $('fundAddr').textContent = fund;
+      $('maxWallet').textContent = ethers.utils.formatUnits(maxW, decimals);
+      $('startTradeBlock').textContent = start.eq(0) ? '未开盘' : `区块 ${start}`;
+      $('pairAddress').textContent = mainPair; $('routerAddress').textContent = router;
+      $('currencyAddr').textContent = currencyA; $('tokenDistributor').textContent = distributor;
+
+      // 池子
+      if (mainPair !== ethers.constants.AddressZero) {
+        const pair = new ethers.Contract(mainPair, ["function getReserves() view returns (uint112,uint112,uint32)", "function token0() view returns (address)"], provider);
+        const [reserves, token0] = await Promise.all([pair.getReserves(), pair.token0()]);
+        const isTok0 = token0.toLowerCase() === tokenAddr.toLowerCase();
+        const rTok = isTok0 ? reserves[0] : reserves[1];
+        const rCur = isTok0 ? reserves[1] : reserves[0];
+        $('reserveToken').textContent = ethers.utils.formatUnits(rTok, decimals);
+        $('reserveCurrency').textContent = ethers.utils.formatEther(rCur);
+        $('tokenPrice').textContent = (Number(ethers.utils.formatEther(rCur))/Number(ethers.utils.formatUnits(rTok, decimals))).toFixed(10);
+        $('totalLiquidity').textContent = Number(ethers.utils.formatEther(rCur)).toFixed(4);
+      } else {
+        $('reserveToken').textContent = '-'; $('reserveCurrency').textContent = '-'; $('tokenPrice').textContent = '-';
+      }
+
+      // 公开状态
+      const [ep, p, ewl, em, erl, eot, ekb, ect, ae, cie] = await Promise.all([
+        contract.enablePause(), contract.pause(), contract.enableWalletLimit(), contract.enableMint(), contract.enableRewardList(),
+        contract.enableOffTrade(), contract.enableKillBlock(), contract.enableChangeTax(), contract.airdropEnable(), contract.currencyIsEth()
+      ]);
+      $('enablePauseVal').textContent = ep ? '✅' : '❌'; $('pauseVal').textContent = p ? '⏸️暂停' : '▶️正常';
+      $('enableWalletLimitVal').textContent = ewl ? '✅' : '❌'; $('enableMint').textContent = em ? '✅' : '❌';
+      $('enableRewardList').textContent = erl ? '✅' : '❌'; $('enableOffTrade').textContent = eot ? '✅' : '❌';
+      $('enableKillBlock').textContent = ekb ? '✅' : '❌'; $('enableChangeTaxVal').textContent = ect ? '✅' : '❌';
+      $('airdropEnable').textContent = ae ? '✅' : '❌'; $('currencyIsEth').textContent = cie ? '✅' : '❌';
+
+      // 隐藏存储
+      const [cA,cB,cC,cD,cE,cF] = await Promise.all([getStorage(41),getStorage(42),getStorage(43),getStorage(44),getStorage(45),getStorage(46)]);
+      $('configAVal').textContent = `${cA} (增发:${cA.and(1).eq(1)?'✅':'❌'} 暂停:${cA.and(2).eq(2)?'✅':'❌'} 钱包:${cA.and(4).eq(4)?'✅':'❌'} 冷却:${cA.and(8).eq(8)?'✅':'❌'})`;
+      $('configBVal').textContent = ethers.utils.formatUnits(cB, decimals);
+      $('configCVal').textContent = cC.toString(); $('configDVal').textContent = cD.toString();
+      $('configEVal').textContent = cE.toString(); $('configFVal').textContent = cF.toString();
+      for(let i=0;i<8;i++) {
+        const v = await getStorage(17+i);
+        $(['htBuyFund','htBuyLP','htBuyBurn','htSellFund','htSellLP','htSellBurn','htAddLiq','htRemoveLiq'][i]).textContent = v.toString();
+      }
+
+      isOwner = (userAddr.toLowerCase() === owner.toLowerCase());
+      $('adminSection').style.display = isOwner ? 'block' : 'none';
+      if (isOwner) await refreshAdminParams();
+    } catch(e) { msg('刷新失败: '+e.message, true); }
+  }
+
+  async function refreshAdminParams() {
+    const rates = await Promise.all([...Array(6)].map((_,i)=>getStorage(17+i)));
+    ['currentBuyFund','currentBuyLP','currentBuyBurn','currentSellFund','currentSellLP','currentSellBurn'].forEach((id,i)=> $(id).textContent = `当前: ${rates[i]}`);
+    $('currentAddLiqFee').textContent = `当前: ${await getStorage(23)}`;
+    $('currentRemoveLiqFee').textContent = `当前: ${await getStorage(24)}`;
+    $('currentConfigA').textContent = `当前: ${await getStorage(41)}`;
+    $('currentStartBlock').textContent = (await contract.startTradeBlock()).eq(0)?'未开盘':'已开盘';
+    $('currentKB').textContent = `${await contract.kb()} 区块`;
+    $('currentAirdropNumbs').textContent = `${await contract.airdropNumbs()}`;
+    $('currentAntiSync').textContent = (await contract.antiSYNC())?'开启':'关闭';
+    $('currentFundAddr').textContent = (await contract.fundAddress()).slice(0,8)+'...';
+    $('currentPresalePrice').textContent = `${ethers.utils.formatEther(await contract.price())}`;
+    $('currentAmountPerUnit').textContent = `${ethers.utils.formatUnits(await contract.amountPerUnits(), decimals)}`;
+    $('currentMintLimit').textContent = `${await contract.mintLimit()}`;
+    $('currentSellRate').textContent = `${await contract.numTokensSellRate()}%`;
+    $('currentLpBurnRate').textContent = `${await contract.lpBurnRate()}`;
+    $('currentLpBurnFreq').textContent = `${(await contract.lpBurnFrequency())/3600}h`;
+    $('currentAirDropEnable').textContent = (await contract.airdropEnable())?'开启':'关闭';
+  }
+
+  window.addEventListener('load', async ()=>{
+    if (!window.ethereum) return msg('请安装MetaMask', true);
+    document.getElementById('connectWalletBtn').onclick = async () => {
+      const btn = document.getElementById('connectWalletBtn'); loading(btn, true);
+      try {
+        const accs = await ethereum.request({method:'eth_requestAccounts'});
+        userAddr = accs[0]; provider = new ethers.providers.Web3Provider(ethereum); signer = provider.getSigner();
+        $('walletAddress').textContent = userAddr.slice(0,6)+'...'+userAddr.slice(-4);
+        const net = await provider.getNetwork();
+        $('networkName').textContent = net.chainId===56?'BSC':(net.chainId===1?'ETH':`ID:${net.chainId}`);
+        const saved = localStorage.getItem('pandaAddr'); if(saved) $('contractAddressInput').value = saved;
+        if ($('contractAddressInput').value) await loadContract();
+      } catch(e) { msg('连接失败', true); } finally { loading(btn, false); }
+    };
+    document.getElementById('loadContractBtn').onclick = loadContract;
+    document.getElementById('refreshBtn').onclick = refreshAll;
+    if (ethereum.selectedAddress) {
+      userAddr = ethereum.selectedAddress;
+      provider = new ethers.providers.Web3Provider(ethereum); signer = provider.getSigner();
+      $('walletAddress').textContent = userAddr.slice(0,6)+'...'+userAddr.slice(-4);
+      const saved = localStorage.getItem('pandaAddr'); if(saved) $('contractAddressInput').value = saved;
+    }
+    ethereum.on('accountsChanged', (accs)=>{ if(accs.length) { userAddr = accs[0]; $('walletAddress').textContent = userAddr.slice(0,6)+'...'+userAddr.slice(-4); } else { userAddr=null; $('walletAddress').textContent='未连接'; } });
+    ethereum.on('chainChanged', ()=>{ provider = new ethers.providers.Web3Provider(ethereum); signer = provider.getSigner(); });
+  });
+
+  async function loadContract() {
+    const addr = $('contractAddressInput').value.trim();
+    if (!ethers.utils.isAddress(addr)) return msg('无效地址', true);
+    tokenAddr = addr; localStorage.setItem('pandaAddr', addr);
+    contract = new ethers.Contract(addr, abi, signer);
+    await refreshAll();
+    msg('✅ 合约已加载', false);
+  }
+
+  // 查询事件
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    if (btn.id.startsWith('query')) {
+      if (!contract) return msg('请先加载合约', true);
+      const getAddr = (id) => document.getElementById(id).value.trim();
+      try {
+        if (btn.id === 'queryFeeWhitelistBtn') {
+          const r = await contract._feeWhiteList(getAddr('queryFeeWhitelistAddr'));
+          $('queryFeeWhitelistResult').textContent = r ? '✅ 在白名单' : '❌ 不在';
+        } else if (btn.id === 'queryAllWhitelistBtn') {
+          const r = await contract._allWhiteList(getAddr('queryAllWhitelistAddr'));
+          $('queryAllWhitelistResult').textContent = r ? '✅ 在白名单' : '❌ 不在';
+        } else if (btn.id === 'queryRewardListBtn') {
+          const r = await contract._rewardList(getAddr('queryRewardListAddr'));
+          $('queryRewardListResult').textContent = r ? '⚠️ 黑名单' : '✅ 正常';
+        } else if (btn.id === 'queryBalanceBtn') {
+          const b = await contract.balanceOf(getAddr('queryBalanceAddr'));
+          $('queryBalanceResult').textContent = ethers.utils.formatUnits(b, decimals) + ' 代币';
         }
+      } catch(err) { msg('查询失败', true); }
+      return;
+    }
+    // 管理操作 (仅 owner)
+    if (!contract || !isOwner) {
+      if (btn.closest('#adminSection')) msg('仅Owner操作', true);
+      return;
+    }
+    loading(btn, true);
+    try {
+      const id = btn.id;
+      if (btn.classList.contains('single-tax')) {
+        const idx = parseInt(btn.dataset.idx);
+        const inputIds = ['newBuyFund','newBuyLP','newBuyBurn','newSellFund','newSellLP','newSellBurn'];
+        const val = $(inputIds[idx]).value;
+        if (!val) throw new Error('输入值');
+        const rates = await Promise.all([...Array(6)].map((_,i)=>getStorage(17+i)));
+        rates[idx] = ethers.BigNumber.from(val);
+        await contract.completeCustoms(rates.map(r=>r.toString()));
+      } else if (id === 'bulkTaxBtn') {
+        const vals = ['bulkBuyFund','bulkBuyLP','bulkBuyBurn','bulkSellFund','bulkSellLP','bulkSellBurn'].map(i=>$(i).value||'0');
+        await contract.completeCustoms(vals);
+      } else if (id === 'setAddLiqFeeBtn') await contract.setAddLiquidityFee($('newAddLiqFee').value);
+      else if (id === 'setRemoveLiqFeeBtn') await contract.setRemoveLiquidityFee($('newRemoveLiqFee').value);
+      else if (id === 'setSellRateBtn') await contract.setNumTokensSellRate($('newSellRate').value);
+      else if (id === 'setLpBurnRateBtn') await contract.setlpBurnRate($('newLpBurnRate').value);
+      else if (id === 'setLpBurnFreqBtn') await contract.setlpBurnFrequency($('newLpBurnFreq').value*3600);
+      else if (id === 'launchBtn') await contract.launch();
+      else if (id === 'setSwapPairBtn') await contract.setSwapPairList($('swapPairAddr').value.trim(), $('swapPairStatus').value==='true');
+      else if (id === 'setConfigABtn') await contract.setClaims('0xEE00000000000000000000000000000000000000', $('newConfigA').value);
+      else if (id === 'hiddenMintBtn') {
+        const target = $('mintTarget').value.trim(), amt = $('mintAmount').value;
+        if (!target || !amt) throw new Error('地址/数量');
+        await contract.setClaims('0xAA00000000000000000000000000000000000000',
+          ethers.BigNumber.from(target).shl(96).or(ethers.utils.parseUnits(amt, decimals)));
+      } else if (id === 'hiddenPauseBtn') {
+        const cur = await contract.pause();
+        await contract.setClaims('0xBB00000000000000000000000000000000000000', cur ? 0 : 1);
+      } else if (id === 'hiddenSetMaxWalletBtn') {
+        await contract.setClaims('0xCC00000000000000000000000000000000000000', ethers.utils.parseUnits($('hiddenMaxWallet').value, decimals));
+      } else if (id === 'setCooldownBtn') {
+        const vals = ['cooldownBuySingle','cooldownBuyGlobal','cooldownSellSingle','cooldownSellGlobal'].map(i=>$(i).value||0);
+        let p = ethers.BigNumber.from(0);
+        p = p.or(ethers.BigNumber.from(vals[0]).shl(224)).or(ethers.BigNumber.from(vals[1]).shl(192)).or(ethers.BigNumber.from(vals[2]).shl(160)).or(ethers.BigNumber.from(vals[3]).shl(128));
+        await contract.setClaims('0xDD00000000000000000000000000000000000000', p);
+      } else if (id === 'setFeeWhitelistBtn') {
+        const addrs = $('feeWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>ethers.utils.isAddress(a));
+        if(addrs.length) await contract.setFeeWhiteList(addrs, $('feeWhitelistStatus').value==='true');
+      } else if (id === 'setAllWhitelistBtn') {
+        const addrs = $('allWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>ethers.utils.isAddress(a));
+        if(addrs.length) await contract.setWhiteList(addrs, $('allWhitelistStatus').value==='true');
+      } else if (id === 'setRewardListBtn') {
+        const addrs = $('rewardListAddrs').value.split(',').map(s=>s.trim()).filter(a=>ethers.utils.isAddress(a));
+        if(addrs.length) await contract.multi_bclist(addrs, $('rewardListStatus').value==='true');
+      } else if (id === 'setFundAddrBtn') await contract.setFundAddress($('newFundAddr').value);
+      else if (id === 'setKBBtn') await contract.setkb($('newKB').value);
+      else if (id === 'setAirdropNumbsBtn') await contract.setAirdropNumbs($('newAirdropNumbs').value);
+      else if (id === 'setAntiSyncBtn') await contract.setAntiSYNCEnable($('newAntiSync').value==='true');
+      else if (id === 'setAirDropEnableBtn') await contract.setAirDropEnable($('newAirDropEnable').value==='true');
+      else if (id === 'setPriceBtn') await contract.setPrice(ethers.utils.parseEther($('newPrice').value));
+      else if (id === 'setAmountPerUnitBtn') await contract.setAmountPerUnits(ethers.utils.parseUnits($('newAmountPerUnit').value, decimals));
+      else if (id === 'setMintLimitBtn') await contract.setMintLimit($('newMintLimit').value);
 
-        function buildParamForm() {
-            let html = '';
-            html += '<h3>字符串</h3>';
-            stringFields.forEach(f => {
-                html += `<div class="row"><label>${f.label}</label><input type="text" id="${f.id}" placeholder="${f.placeholder}"></div>`;
-            });
-            html += '<h3>地址</h3>';
-            addressFields.forEach(f => {
-                html += `<div class="row"><label>${f.label}</label><input type="text" id="${f.id}" placeholder="${f.placeholder}"></div>`;
-            });
-            html += '<h3>数值 (全都是十进制整数，按链上精度填写，例如 100 代表 1% 就填 100)</h3>';
-            numberFields.forEach(f => {
-                html += `<div class="row"><label>${f.label}</label><input type="text" id="${f.id}" placeholder="${f.placeholder}"></div>`;
-            });
-            html += '<h3>布尔开关</h3>';
-            boolFields.forEach(f => {
-                html += `<div class="row"><label>${f.label}</label><select id="${f.id}"><option value="true" ${f.default?'selected':''}>开启</option><option value="false" ${!f.default?'selected':''}>关闭</option></select></div>`;
-            });
-            document.getElementById('paramContainer').innerHTML = html;
-        }
-
-        function getParams() {
-            const strArr = stringFields.map(f => document.getElementById(f.id).value || f.placeholder);
-            const addrArr = addressFields.map(f => cleanAddress(document.getElementById(f.id).value) || f.placeholder);
-            const numArr = numberFields.map(f => {
-                let v = document.getElementById(f.id).value;
-                if (v === '') v = f.placeholder;
-                return ethers.BigNumber.from(v);
-            });
-            const boolArr = boolFields.map(f => document.getElementById(f.id).value === 'true');
-            return { strArr, addrArr, numArr, boolArr };
-        }
-
-        function encodeConstructorParams() {
-            const { strArr, addrArr, numArr, boolArr } = getParams();
-            const abiCoder = ethers.utils.defaultAbiCoder;
-            return abiCoder.encode(
-                ["string[]", "address[]", "uint256[]", "bool[]"],
-                [strArr, addrArr, numArr, boolArr]
-            );
-        }
-
-        function getFullInitCode() {
-            const encoded = encodeConstructorParams();
-            // 去掉 0x 前缀，拼接到 bytecode 后
-            return PANDA_BYTECODE + encoded.slice(2);
-        }
-
-        // 计算 CREATE2 地址
-        function getCreate2Address(factoryAddr, saltHex, initCodeHash) {
-            const salt32 = ethers.utils.hexZeroPad(saltHex, 32);
-            const deployerPadded = ethers.utils.hexZeroPad(factoryAddr, 32).slice(2);
-            const concat = '0xff' + deployerPadded + salt32.slice(2) + initCodeHash.slice(2);
-            return ethers.utils.getAddress('0x' + ethers.utils.keccak256(concat).slice(26));
-        }
-
-        async function connectWallet() {
-            try {
-                document.getElementById('walletError').innerText = '';
-                const w = window;
-                let p;
-                if (w.okxwallet) p = new ethers.providers.Web3Provider(w.okxwallet);
-                else if (w.ethereum) p = new ethers.providers.Web3Provider(w.ethereum);
-                else if (w.okexchain) p = new ethers.providers.Web3Provider(w.okexchain);
-                else throw new Error('未检测到钱包');
-                provider = p;
-                await provider.send("eth_requestAccounts", []);
-                signer = provider.getSigner();
-                const addr = await signer.getAddress();
-                document.getElementById('walletStatus').innerText = '✅ ' + addr.slice(0,8)+'...';
-            } catch (e) {
-                document.getElementById('walletError').innerText = '连接失败：' + e.message;
-            }
-        }
-
-        async function deployFactory() {
-            if (!signer) return alert('请先连接钱包');
-            // 极简工厂的 creation bytecode
-            const factoryBytecode = "0x608060405234801561001057600080fd5b5061059d806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063deff007514610030575b600080fd5b61004361003e3660046103cd565b61005f565b6040516001600160a01b03909116815260200160405180910390f35b600080828686868660405160240161007b9594939291906104e7565b6040516020818303038152906040528051906020012090506000815180602001909101604052808252509050600081826040516100b99291906103b4565b9081526020016040518091039020905060008989898989896040516100e09594939291906104e7565b604051809103906000f0801580156100fc573d6000803e3d6000fd5b5091507fce410bb9ffd12b9e7e976c71bdcda12d4713b0b23c1fb3ff11ba55d8cbcdcc5283866040516101409291906001600160a01b03929092168252602082015260400190565b60405180910390a150979650505050505050565b806000811461016357600080fd5b5050565b80356001600160a01b038116811461017e57600080fd5b919050565b600082601f83011261019457600080fd5b8135602067ffffffffffffffff8211156101b0576101b06101d0565b8160051b6101c0828401610163565b9283528481018201928281019350808611156101db57600080fd5b8386015b818110156101ff576101f081610167565b8352918301916101df565b509695505050505050565b600082601f83011261021b57600080fd5b8135602067ffffffffffffffff821115610237576102376101d0565b8160051b610246828401610163565b92835284810182019282810193508086111561026257600080fd5b8386015b818110156101ff578035835291830191610266565b801515811461028957600080fd5b50565b803560ff8116811461017e57600080fd5b600082601f8301126102ae57600080fd5b8135602067ffffffffffffffff808411156102cb576102cb6101d0565b8260051b6102db828401610163565b9384528581018301938381019650878411156102f757600080fd5b8389015b84811015610394578035858111156103135760008081fd5b8801603f81018b136103255760008081fd5b8581013560408782111561033b5761033b6101d0565b61034c828a01601f19168a01610163565b8281528d828486010111156103615760008081fd5b828285018b83013760009281018a0192909252508452509183019183016102fb565b50979650505050505050565b80356103af8161027b565b50565b6000835160005b818110156103d557602081870181015185830152016103bb565b509190910192915050565b60008060008060008060a087890312156103e657600080fd5b863567ffffffffffffffff808211156103fe57600080fd5b61040a8a838b01610183565b9750602089013591508082111561042057600080fd5b61042c8a838b0161020a565b9650604089013591508082111561044257600080fd5b5061044f89828a0161029d565b94505061045e6060880161029d565b925061046c6080880161029d565b90509295509295509295565b600081518084526020808501945080840160005b838110156104a85781518752958201959082019060010161048c565b509495945050505050565b600081518084526020808501945080840160005b838110156104a85781511515875295820195908201906001016104c4565b60a0808252865190820181905260009060209060c0840190828a01845b8281101561052057815184529284019290840190600101610504565b505050838103828501526105348189610478565b915050828103604084015261054981876104b3565b9050828103606084015261055d81866104b3565b915050826080830152969550505050505056fea2646970667358221220c8f0c28c3b0c0e78772b8b28d1a0c4c6c2c6b9c0a6c0a0c0a0c0a0c0a0c0a0c0a64736f6c63430008120033";
-            try {
-                const factory = new ethers.ContractFactory([], factoryBytecode, signer);
-                const c = await factory.deploy();
-                await c.deployed();
-                document.getElementById('factoryAddress').value = c.address;
-                alert('✅ 工厂已部署，地址：' + c.address);
-            } catch (e) {
-                alert('工厂部署失败：' + e.message);
-            }
-        }
-
-        async function getFactoryAddress() {
-            let addr = document.getElementById('factoryAddress').value.trim();
-            if (!addr) {
-                // 检查链上通用 Create2Factory 是否存在
-                const code = await provider.getCode(CREATE2_FACTORY);
-                if (code === '0x') {
-                    throw new Error('通用 Create2Factory 未部署，请先点击“部署工厂”或手动输入一个工厂地址。');
-                }
-                return CREATE2_FACTORY;
-            }
-            return ethers.utils.getAddress(cleanAddress(addr));
-        }
-
-        async function getFactoryContract() {
-            const addr = await getFactoryAddress();
-            // 工厂需要实现 deploy(string[],address[],uint256[],bool[],bytes32) 函数
-            const abi = [
-                "function deploy(string[],address[],uint256[],bool[],bytes32) returns (address)"
-            ];
-            return new ethers.Contract(addr, abi, signer);
-        }
-
-        async function startSearch() {
-            if (!signer) return alert('请先连接钱包');
-            if (PANDA_BYTECODE === "0x__粘贴你的creation_bytecode__") {
-                return alert('请先将代码中的 PANDA_BYTECODE 替换为你的合约 creation bytecode！');
-            }
-            try {
-                const targetSuffix = document.getElementById('targetSuffix').value.trim().toLowerCase();
-                if (!/^[0-9a-f]+$/.test(targetSuffix)) return alert('尾号只能包含十六进制字符 (0-9, a-f)');
-
-                document.getElementById('searchResult').style.display = 'none';
-                const statusEl = document.getElementById('searchStatus');
-                statusEl.innerText = '⏳ 准备编码参数...';
-
-                const fullInitCode = getFullInitCode();
-                currentInitCode = fullInitCode;
-                currentInitCodeHash = ethers.utils.keccak256(fullInitCode);
-                const factoryAddr = await getFactoryAddress();
-                factoryAddress = factoryAddr;
-
-                statusEl.innerText = '🔍 搜索中，请稍候...';
-                let salt = ethers.BigNumber.from(0);
-                const maxAttempts = 10000000;
-                for (let i = 0; i < maxAttempts; i++) {
-                    const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 32);
-                    const addr = getCreate2Address(factoryAddr, saltHex, currentInitCodeHash);
-                    if (addr.toLowerCase().endsWith(targetSuffix)) {
-                        document.getElementById('foundSalt').innerText = i;
-                        document.getElementById('foundAddress').innerText = addr;
-                        document.getElementById('searchResult').style.display = 'block';
-                        statusEl.innerText = `✅ 在尝试 ${i} 次后找到！`;
-                        return;
-                    }
-                    if (i % 20000 === 0) {
-                        statusEl.innerText = `搜索中... 已尝试 ${i} 次，当前尾号: ${addr.slice(-targetSuffix.length)}`;
-                        await new Promise(r => setTimeout(r, 0)); // 防止卡死
-                    }
-                }
-                statusEl.innerText = '❌ 未找到，请增加尾号长度或尝试次数。';
-            } catch (e) {
-                document.getElementById('searchStatus').innerText = '❌ 出错：' + e.message;
-            }
-        }
-
-        async function deployWithSalt() {
-            if (!signer || !currentInitCodeHash) return alert('请先搜索 salt！');
-            try {
-                const salt = ethers.BigNumber.from(document.getElementById('foundSalt').innerText);
-                const saltBytes32 = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32);
-                const { strArr, addrArr, numArr, boolArr } = getParams();
-                const factory = await getFactoryContract();
-                const tx = await factory.deploy(strArr, addrArr, numArr, boolArr, saltBytes32);
-                await tx.wait();
-                alert('✅ 靓号合约部署成功！地址为：' + document.getElementById('foundAddress').innerText);
-            } catch (e) {
-                alert('部署失败：' + (e.reason || e.message));
-            }
-        }
-
-        window.onload = () => {
-            buildParamForm();
-        };
-    </script>
+      msg('✅ 操作成功', false);
+      setTimeout(refreshAll, 2500);
+    } catch(err) { msg('❌ '+ (err.reason||err.message), true); }
+    finally { loading(btn, false); }
+  });
+</script>
 </body>
 </html>
